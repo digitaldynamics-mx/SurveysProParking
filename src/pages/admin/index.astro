@@ -1,0 +1,166 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { isAuthed } from '../../lib/auth';
+import { listResponses, type StoredResponse } from '../../lib/store';
+import { SURVEYS, type Question } from '../../lib/surveys';
+
+export const prerender = false;
+
+if (!isAuthed(Astro.cookies)) {
+  return Astro.redirect('/admin/login');
+}
+
+type QuestionStat =
+  | { kind: 'yesno'; question: Question; yesPct: number; n: number }
+  | { kind: 'scale'; question: Question; average: number; n: number }
+  | { kind: 'nps'; question: Question; score: number; promoters: number; detractors: number; n: number }
+  | { kind: 'text'; question: Question; answers: string[] };
+
+function computeStats(questions: Question[], responses: StoredResponse[]): QuestionStat[] {
+  return questions.map((q) => {
+    const values = responses.map((r) => r.answers[q.id]).filter((v) => v !== undefined);
+
+    if (q.type === 'yesno') {
+      const yes = values.filter((v) => v === 'si').length;
+      const n = values.length;
+      return { kind: 'yesno', question: q, yesPct: n ? (yes / n) * 100 : 0, n };
+    }
+
+    if (q.type === 'scale') {
+      const nums = values.map(Number).filter(Number.isFinite);
+      const avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+      return { kind: 'scale', question: q, average: avg, n: nums.length };
+    }
+
+    if (q.type === 'nps') {
+      const nums = values.map(Number).filter(Number.isFinite);
+      const n = nums.length;
+      const promoters = nums.filter((v) => v >= 9).length;
+      const detractors = nums.filter((v) => v <= 6).length;
+      const score = n ? ((promoters - detractors) / n) * 100 : 0;
+      return { kind: 'nps', question: q, score, promoters, detractors, n };
+    }
+
+    return { kind: 'text', question: q, answers: values.filter((v) => v && v.trim().length > 0) };
+  });
+}
+
+const sections = Object.values(SURVEYS).map((survey) => {
+  const raw = listResponses(survey.type);
+  return {
+    survey,
+    count: raw.length,
+    stats: computeStats(survey.questions, raw),
+    raw,
+  };
+});
+---
+
+<Layout title="Panel de encuestas — ProParking">
+  <main class="mx-auto max-w-5xl px-5 py-12">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img src="/images/logo.png" alt="ProParking" class="h-8 w-auto" />
+        <h1 class="text-xl font-extrabold text-ink-800">Panel de encuestas</h1>
+      </div>
+      <a href="/admin/logout" class="text-sm font-semibold text-ink-400 hover:text-orange-600">Cerrar sesión</a>
+    </div>
+
+    <div class="mt-10 grid gap-6 lg:grid-cols-3">
+      {sections.map(({ survey, count, stats }) => (
+        <div class="card">
+          <div class="flex items-baseline justify-between">
+            <span class="eyebrow">{survey.tag}</span>
+            <span class="text-sm font-bold text-ink-400">{count} respuestas</span>
+          </div>
+          <h2 class="mt-3 text-lg font-extrabold text-ink-800">{survey.title}</h2>
+
+          {count === 0 ? (
+            <p class="mt-4 text-sm text-ink-400">Aún no hay respuestas.</p>
+          ) : (
+            <ul class="mt-5 space-y-4">
+              {stats.map((s) => (
+                <li>
+                  {s.kind === 'scale' && (
+                    <>
+                      <div class="flex items-center justify-between text-xs font-semibold text-ink-500">
+                        <span class="truncate pr-2">{s.question.text}</span>
+                        <span class="shrink-0">{s.average.toFixed(1)} / 5</span>
+                      </div>
+                      <div class="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-ink-700/8">
+                        <div class="h-full rounded-full bg-orange-500" style={`width: ${(s.average / 5) * 100}%`}></div>
+                      </div>
+                    </>
+                  )}
+
+                  {s.kind === 'yesno' && (
+                    <>
+                      <div class="flex items-center justify-between text-xs font-semibold text-ink-500">
+                        <span class="truncate pr-2">{s.question.text}</span>
+                        <span class="shrink-0">{s.yesPct.toFixed(0)}% Sí</span>
+                      </div>
+                      <div class="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-ink-700/8">
+                        <div class="h-full rounded-full bg-green-500" style={`width: ${s.yesPct}%`}></div>
+                      </div>
+                    </>
+                  )}
+
+                  {s.kind === 'nps' && (
+                    <div class="rounded-xl border border-ink-700/10 bg-cream-50 p-4 text-center">
+                      <p class="text-xs font-semibold text-ink-500">{s.question.text}</p>
+                      <p class="mt-1 text-3xl font-extrabold text-ink-800">{s.score.toFixed(0)}</p>
+                      <p class="text-[11px] text-ink-400">NPS · {s.promoters} promotores, {s.detractors} detractores de {s.n}</p>
+                    </div>
+                  )}
+
+                  {s.kind === 'text' && s.answers.length > 0 && (
+                    <div>
+                      <p class="text-xs font-semibold text-ink-500">{s.question.text}</p>
+                      <ul class="mt-2 space-y-1.5">
+                        {s.answers.map((a) => (
+                          <li class="rounded-lg bg-cream-50 p-2.5 text-xs text-ink-600">"{a}"</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+
+    {sections.map(({ survey, raw }) => (
+      <div class="mt-10">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-ink-400">
+          Respuestas crudas · {survey.title}
+        </h3>
+        <div class="mt-3 overflow-x-auto rounded-2xl border border-ink-700/10 bg-white">
+          <table class="w-full min-w-[480px] text-left text-sm">
+            <thead class="bg-ink-800 text-white">
+              <tr>
+                <th class="px-4 py-3 font-bold">Fecha</th>
+                <th class="px-4 py-3 font-bold">Respuestas (JSON)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {raw.length === 0 ? (
+                <tr><td class="px-4 py-3 text-ink-400" colspan="2">Sin datos todavía.</td></tr>
+              ) : (
+                raw.map((r) => (
+                  <tr class="border-t border-ink-700/8 odd:bg-cream-50">
+                    <td class="whitespace-nowrap px-4 py-3 align-top text-ink-500">{r.created_at}</td>
+                    <td class="px-4 py-3">
+                      <pre class="whitespace-pre-wrap break-words font-mono text-xs text-ink-600">{JSON.stringify(r.answers, null, 2)}</pre>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ))}
+  </main>
+</Layout>

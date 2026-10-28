@@ -1,0 +1,37 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { SURVEYS } from '../lib/surveys';
+
+const cards = Object.values(SURVEYS);
+---
+
+<Layout title="Encuestas ProParking">
+  <main class="flex min-h-screen items-center justify-center px-5 py-16">
+    <div class="w-full max-w-4xl">
+      <div class="flex flex-col items-center text-center">
+        <img src="/images/logo.png" alt="ProParking" class="h-10 w-auto" />
+        <h1 class="mt-6 text-3xl font-extrabold text-ink-800 sm:text-4xl">Encuestas ProParking</h1>
+        <p class="mt-3 max-w-md text-ink-400">Elige la encuesta que te corresponde contestar.</p>
+      </div>
+
+      <div class="mt-10 grid gap-5 sm:grid-cols-3">
+        {cards.map((c) => (
+          <a
+            href={`/encuesta/${c.slug}`}
+            class="card border-2 border-transparent transition-colors hover:border-orange-500/30"
+          >
+            <span class="eyebrow">{c.tag}</span>
+            <h2 class="mt-4 text-lg font-extrabold text-ink-800">{c.title}</h2>
+            <p class="mt-2 text-sm leading-relaxed text-ink-400">{c.intro}</p>
+            <span class="mt-5 inline-flex items-center gap-2 text-sm font-bold text-orange-600">
+              Contestar
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </main>
+</Layout>

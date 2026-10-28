@@ -1,0 +1,21 @@
+---
+interface Props {
+  id: string;
+  index: number;
+  text: string;
+}
+
+const { id, index, text } = Astro.props;
+---
+
+<fieldset class="rounded-2xl border border-ink-700/10 bg-white p-6 sm:p-7" data-question={id}>
+  <legend class="px-1 text-base font-bold text-ink-800">
+    <span class="mr-2 text-orange-500">{index}.</span>{text}
+  </legend>
+  <textarea
+    name={id}
+    rows="3"
+    placeholder="Escribe tu respuesta"
+    class="mt-4 w-full rounded-xl border-2 border-ink-700/10 bg-cream-50 p-3 text-sm focus:border-orange-500 focus:outline-none"
+  ></textarea>
+</fieldset>

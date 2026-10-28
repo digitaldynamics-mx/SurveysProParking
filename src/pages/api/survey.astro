@@ -1,0 +1,36 @@
+---
+// Nota: esto es un .astro (no un .ts) a propósito. En este entorno (Astro
+// 2.10 + Node 16) los archivos de endpoint puro (.ts/.js) en src/pages no se
+// registran como rutas en modo dev; devolver un Response desde el frontmatter
+// de una página .astro sí funciona y logra lo mismo.
+export const prerender = false;
+
+import { insertResponse } from '../../lib/store';
+import { getSurvey } from '../../lib/surveys';
+
+if (Astro.request.method !== 'POST') {
+  return new Response(JSON.stringify({ error: 'method not allowed' }), { status: 405 });
+}
+
+try {
+  const body = await Astro.request.json();
+  const { survey_type: surveyType, answers } = body ?? {};
+
+  if (typeof surveyType !== 'string' || !getSurvey(surveyType)) {
+    return new Response(JSON.stringify({ error: 'survey_type inválido' }), { status: 400 });
+  }
+
+  if (!answers || typeof answers !== 'object') {
+    return new Response(JSON.stringify({ error: 'answers inválido' }), { status: 400 });
+  }
+
+  insertResponse(surveyType, answers);
+
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+} catch (err) {
+  return new Response(JSON.stringify({ error: 'bad request' }), { status: 400 });
+}
+---

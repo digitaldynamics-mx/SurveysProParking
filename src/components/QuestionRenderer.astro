@@ -1,0 +1,19 @@
+---
+import ScaleQuestion from './ScaleQuestion.astro';
+import NPSQuestion from './NPSQuestion.astro';
+import YesNoQuestion from './YesNoQuestion.astro';
+import OpenTextQuestion from './OpenTextQuestion.astro';
+import type { Question } from '../lib/surveys';
+
+interface Props {
+  question: Question;
+  index: number;
+}
+
+const { question, index } = Astro.props;
+---
+
+{question.type === 'scale' && <ScaleQuestion id={question.id} index={index} text={question.text} />}
+{question.type === 'nps' && <NPSQuestion id={question.id} index={index} text={question.text} />}
+{question.type === 'yesno' && <YesNoQuestion id={question.id} index={index} text={question.text} />}
+{question.type === 'text' && <OpenTextQuestion id={question.id} index={index} text={question.text} />}

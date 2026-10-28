@@ -1,0 +1,32 @@
+---
+interface Props {
+  id: string;
+  index: number;
+  text: string;
+}
+
+const { id, index, text } = Astro.props;
+---
+
+<fieldset class="rounded-2xl border border-ink-700/10 bg-white p-5 sm:p-6" data-question={id}>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <legend class="px-1 text-sm font-bold text-ink-800 sm:max-w-[70%]">
+      <span class="mr-2 text-orange-500">{index}.</span>{text}
+    </legend>
+
+    <div class="flex gap-2">
+      <label class="group cursor-pointer">
+        <input type="radio" name={id} value="si" required class="peer sr-only" />
+        <span class="flex h-10 w-20 items-center justify-center rounded-xl border-2 border-ink-700/10 bg-cream-50 text-sm font-bold text-ink-500 transition-all duration-150 peer-checked:border-green-500 peer-checked:bg-green-500 peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-green-500 group-hover:border-green-400">
+          Sí
+        </span>
+      </label>
+      <label class="group cursor-pointer">
+        <input type="radio" name={id} value="no" required class="peer sr-only" />
+        <span class="flex h-10 w-20 items-center justify-center rounded-xl border-2 border-ink-700/10 bg-cream-50 text-sm font-bold text-ink-500 transition-all duration-150 peer-checked:border-orange-500 peer-checked:bg-orange-500 peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-green-500 group-hover:border-orange-400">
+          No
+        </span>
+      </label>
+    </div>
+  </div>
+</fieldset>

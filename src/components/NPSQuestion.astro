@@ -1,0 +1,36 @@
+---
+interface Props {
+  id: string;
+  index: number;
+  text: string;
+}
+
+const { id, index, text } = Astro.props;
+const values = Array.from({ length: 11 }, (_, i) => i); // 0..10
+---
+
+<fieldset class="rounded-2xl border border-ink-700/10 bg-white p-6 sm:p-7" data-question={id}>
+  <legend class="px-1 text-base font-bold text-ink-800">
+    <span class="mr-2 text-orange-500">{index}.</span>{text}
+  </legend>
+
+  <div class="mt-5 flex items-center gap-2">
+    <span class="text-xl" aria-hidden="true">😞</span>
+    <div class="grid flex-1 grid-cols-11 gap-1 sm:gap-1.5">
+      {values.map((value) => (
+        <label class="group flex cursor-pointer flex-col items-center">
+          <input type="radio" name={id} value={value} required class="peer sr-only" />
+          <span class="flex h-9 w-full items-center justify-center rounded-lg border-2 border-ink-700/10 bg-cream-50 text-xs font-bold text-ink-500 transition-all duration-150 peer-checked:border-orange-500 peer-checked:bg-orange-500 peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-green-500 group-hover:border-orange-400">
+            {value}
+          </span>
+        </label>
+      ))}
+    </div>
+    <span class="text-xl" aria-hidden="true">😄</span>
+  </div>
+
+  <div class="mt-2 flex justify-between text-xs text-ink-400">
+    <span>Nada probable</span>
+    <span>Muy probable</span>
+  </div>
+</fieldset>

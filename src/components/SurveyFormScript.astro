@@ -1,0 +1,44 @@
+<script>
+  function initSurveyForm(form: HTMLFormElement) {
+    const surveyType = form.dataset.surveyType;
+    const submitButton = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    const errorBox = form.querySelector<HTMLElement>('[data-survey-error]');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox?.classList.add('hidden');
+
+      const formData = new FormData(form);
+      const answers: Record<string, string> = {};
+      formData.forEach((value, key) => {
+        answers[key] = String(value);
+      });
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Enviando…';
+      }
+
+      try {
+        const response = await fetch('/api/survey', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ survey_type: surveyType, answers }),
+        });
+
+        if (!response.ok) throw new Error('request failed');
+
+        form.innerHTML =
+          '<div class="rounded-2xl border border-green-200 bg-green-50 p-8 text-center"><p class="text-lg font-bold text-green-800">¡Gracias por tu respuesta!</p><p class="mt-2 text-sm text-green-700">Tu opinión nos ayuda a mejorar ProParking.</p></div>';
+      } catch (err) {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Enviar respuestas';
+        }
+        errorBox?.classList.remove('hidden');
+      }
+    });
+  }
+
+  document.querySelectorAll<HTMLFormElement>('[data-survey-form]').forEach(initSurveyForm);
+</script>

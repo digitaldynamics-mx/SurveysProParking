@@ -1,0 +1,32 @@
+---
+interface Props {
+  id: string;
+  index: number;
+  text: string;
+}
+
+const { id, index, text } = Astro.props;
+const values = [0, 1, 2, 3, 4, 5];
+---
+
+<fieldset class="rounded-2xl border border-ink-700/10 bg-white p-6 sm:p-7" data-question={id}>
+  <legend class="px-1 text-base font-bold text-ink-800">
+    <span class="mr-2 text-orange-500">{index}.</span>{text}
+  </legend>
+
+  <div class="mt-5 grid grid-cols-6 gap-2 sm:gap-3">
+    {values.map((value) => (
+      <label class="group flex cursor-pointer flex-col items-center gap-2">
+        <input type="radio" name={id} value={value} required class="peer sr-only" />
+        <span class="flex h-11 w-full items-center justify-center rounded-xl border-2 border-ink-700/10 bg-cream-50 text-sm font-bold text-ink-500 transition-all duration-150 peer-checked:border-orange-500 peer-checked:bg-orange-500 peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-green-500 group-hover:border-orange-400">
+          {value}
+        </span>
+      </label>
+    ))}
+  </div>
+
+  <div class="mt-2 flex justify-between text-xs text-ink-400">
+    <span>Nada</span>
+    <span>Totalmente</span>
+  </div>
+</fieldset>
