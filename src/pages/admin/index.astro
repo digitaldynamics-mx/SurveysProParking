@@ -143,16 +143,18 @@ const sections = await Promise.all(
             <thead class="bg-ink-800 text-white">
               <tr>
                 <th class="px-4 py-3 font-bold">Fecha</th>
+                <th class="px-4 py-3 font-bold">Nombre</th>
                 <th class="px-4 py-3 font-bold">Respuestas (JSON)</th>
               </tr>
             </thead>
             <tbody>
               {raw.length === 0 ? (
-                <tr><td class="px-4 py-3 text-ink-400" colspan="2">Sin datos todavía.</td></tr>
+                <tr><td class="px-4 py-3 text-ink-400" colspan="3">Sin datos todavía.</td></tr>
               ) : (
                 raw.map((r) => (
                   <tr class="border-t border-ink-700/8 odd:bg-cream-50">
                     <td class="whitespace-nowrap px-4 py-3 align-top text-ink-500">{r.created_at}</td>
+                    <td class="whitespace-nowrap px-4 py-3 align-top font-semibold text-ink-700">{r.answers.nombre ?? '—'}</td>
                     <td class="px-4 py-3">
                       <pre class="whitespace-pre-wrap break-words font-mono text-xs text-ink-600">{JSON.stringify(r.answers, null, 2)}</pre>
                     </td>
