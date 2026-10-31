@@ -6,4 +6,4 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
-data/*.ndjson
+data/*.sqlite

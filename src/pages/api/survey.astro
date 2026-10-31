@@ -5,7 +5,7 @@
 // de una página .astro sí funciona y logra lo mismo.
 export const prerender = false;
 
-import { insertResponse } from '../../lib/store';
+import { insertResponse } from '../../lib/db';
 import { getSurvey } from '../../lib/surveys';
 
 if (Astro.request.method !== 'POST') {
@@ -24,7 +24,7 @@ try {
     return new Response(JSON.stringify({ error: 'answers inválido' }), { status: 400 });
   }
 
-  insertResponse(surveyType, answers);
+  await insertResponse(surveyType, answers);
 
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,

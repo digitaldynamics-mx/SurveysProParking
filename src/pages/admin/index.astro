@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { isAuthed } from '../../lib/auth';
-import { listResponses, type StoredResponse } from '../../lib/store';
+import { listResponses, type SurveyResponseRow } from '../../lib/db';
 import { SURVEYS, type Question } from '../../lib/surveys';
 
 export const prerender = false;
@@ -16,7 +16,7 @@ type QuestionStat =
   | { kind: 'nps'; question: Question; score: number; promoters: number; detractors: number; n: number }
   | { kind: 'text'; question: Question; answers: string[] };
 
-function computeStats(questions: Question[], responses: StoredResponse[]): QuestionStat[] {
+function computeStats(questions: Question[], responses: SurveyResponseRow[]): QuestionStat[] {
   return questions.map((q) => {
     const values = responses.map((r) => r.answers[q.id]).filter((v) => v !== undefined);
 
@@ -45,15 +45,17 @@ function computeStats(questions: Question[], responses: StoredResponse[]): Quest
   });
 }
 
-const sections = Object.values(SURVEYS).map((survey) => {
-  const raw = listResponses(survey.type);
-  return {
-    survey,
-    count: raw.length,
-    stats: computeStats(survey.questions, raw),
-    raw,
-  };
-});
+const sections = await Promise.all(
+  Object.values(SURVEYS).map(async (survey) => {
+    const raw = await listResponses(survey.type);
+    return {
+      survey,
+      count: raw.length,
+      stats: computeStats(survey.questions, raw),
+      raw,
+    };
+  })
+);
 ---
 
 <Layout title="Panel de encuestas — ProParking">
