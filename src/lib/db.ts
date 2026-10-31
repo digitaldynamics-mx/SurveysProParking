@@ -1,50 +1,28 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import initSqlJs, { type Database } from 'sql.js';
+import pg from 'pg';
+import crypto from 'node:crypto';
 
-// Base de datos SQLite real (sql.js = SQLite compilado a WebAssembly, sin
-// compilar código nativo — better-sqlite3 requiere Xcode Command Line Tools,
-// que no están instaladas). El archivo .sqlite vive en memoria mientras el
-// servidor corre y se vuelca a disco en cada escritura.
+// Conecta a la tabla "Surveys" en el Postgres de producción de ProParking
+// (mismo droplet). La tabla solo tiene dos columnas: id (text, generado por
+// la app como UUID) y survey_enroll (json, con tipo de encuesta, fecha y
+// respuestas). No se toca ninguna otra tabla de esa base de datos.
 //
-// Tabla: responses(id, encuesta)
-//   id       -> número de solicitud (autoincremental)
-//   encuesta -> JSON completo: { survey_type, created_at, answers }
+// SSL sin verificación de certificado: decisión explícita del cliente
+// (certificado autofirmado en el servidor Postgres).
 
-const dataDir = fileURLToPath(new URL('../../data/', import.meta.url));
-const dbFile = path.join(dataDir, 'surveys.sqlite');
+const { Pool } = pg;
 
-let dbPromise: Promise<Database> | null = null;
+let pool: InstanceType<typeof Pool> | null = null;
 
-async function getDb(): Promise<Database> {
-  if (!dbPromise) {
-    dbPromise = (async () => {
-      const SQL = await initSqlJs({
-        locateFile: (f) => fileURLToPath(new URL(`../../node_modules/sql.js/dist/${f}`, import.meta.url)),
-      });
-
-      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-      const db = fs.existsSync(dbFile) ? new SQL.Database(fs.readFileSync(dbFile)) : new SQL.Database();
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS responses (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          encuesta TEXT NOT NULL
-        );
-      `);
-
-      persist(db);
-      return db;
-    })();
+function getPool() {
+  if (!pool) {
+    const connectionString = import.meta.env.DATABASE_URL;
+    if (!connectionString) throw new Error('DATABASE_URL no está configurado');
+    pool = new Pool({
+      connectionString,
+      ssl: { rejectUnauthorized: false },
+    });
   }
-  return dbPromise;
-}
-
-function persist(db: Database) {
-  const data = db.export();
-  fs.writeFileSync(dbFile, Buffer.from(data));
+  return pool;
 }
 
 export interface SurveyPayload {
@@ -54,42 +32,33 @@ export interface SurveyPayload {
 }
 
 export interface SurveyResponseRow extends SurveyPayload {
-  id: number;
+  id: string;
 }
 
 export async function insertResponse(surveyType: string, answers: unknown) {
-  const db = await getDb();
   const payload: SurveyPayload = {
     survey_type: surveyType,
     created_at: new Date().toISOString(),
     answers: answers as Record<string, string>,
   };
 
-  const stmt = db.prepare('INSERT INTO responses (encuesta) VALUES (:encuesta)');
-  stmt.run({ ':encuesta': JSON.stringify(payload) });
-  stmt.free();
-  persist(db);
-}
+  const id = crypto.randomUUID();
 
-function parseRow(row: { id: number; encuesta: string }): SurveyResponseRow | null {
-  try {
-    const payload = JSON.parse(row.encuesta) as SurveyPayload;
-    return { id: row.id, ...payload };
-  } catch {
-    return null;
-  }
+  await getPool().query('INSERT INTO "Surveys" (id, survey_enroll) VALUES ($1, $2)', [
+    id,
+    JSON.stringify(payload),
+  ]);
 }
 
 export async function listResponses(surveyType?: string): Promise<SurveyResponseRow[]> {
-  const db = await getDb();
-  const stmt = db.prepare('SELECT * FROM responses ORDER BY id DESC');
+  const result = await getPool().query<{ id: string; survey_enroll: SurveyPayload }>(
+    'SELECT id, survey_enroll FROM "Surveys"'
+  );
 
-  const rows: SurveyResponseRow[] = [];
-  while (stmt.step()) {
-    const row = stmt.getAsObject() as { id: number; encuesta: string };
-    const parsed = parseRow(row);
-    if (parsed && (!surveyType || parsed.survey_type === surveyType)) rows.push(parsed);
-  }
-  stmt.free();
+  const rows = result.rows
+    .map((r) => ({ id: r.id, ...r.survey_enroll }))
+    .filter((r) => !surveyType || r.survey_type === surveyType)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+
   return rows;
 }
